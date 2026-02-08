@@ -2,6 +2,7 @@ package com.burakpadr.signalingserver.service;
 
 import com.burakpadr.signalingserver.constant.EnumCallState;
 import com.burakpadr.signalingserver.constant.EnumMessageType;
+import com.burakpadr.signalingserver.constant.ExceptionMessage;
 import com.burakpadr.signalingserver.model.SignalingMessageModel;
 import com.burakpadr.signalingserver.context.SessionCallStateContext;
 import com.burakpadr.signalingserver.context.WebSocketSessionContext;
@@ -26,11 +27,11 @@ public class SignalingService {
         try {
             message = objectMapper.readValue(payload, SignalingMessageModel.class);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid signaling message", e);
+            throw new IllegalArgumentException(ExceptionMessage.INVALID_SIGNALING_MESSAGE_FORMAT, e);
         }
 
         if (!message.getFrom().equals(fromPeerId)) {
-            throw new IllegalStateException("PeerId mismatch");
+            throw new IllegalStateException(ExceptionMessage.PEER_ID_MISMATCH);
         }
 
         switch (message.getType()) {
@@ -40,14 +41,14 @@ public class SignalingService {
             case CALL_REJECT -> handleCallReject(message);
             case SDP_OFFER, SDP_ANSWER -> handleSdp(message);
             case ICE_CANDIDATE -> handleIceCandidate(message);
-            default -> throw new IllegalStateException("Unknown signaling message type");
+            default -> throw new IllegalStateException(ExceptionMessage.UNKNOWN_SIGNALING_MESSAGE_TYPE);
         }
     }
 
     private void handleCallRequest(SignalingMessageModel message) {
         WebSocketSession fromSession = WebSocketSessionContext.getInstance()
                 .get(message.getFrom())
-                .orElseThrow(() -> new IllegalStateException("No websocket session found"));
+                .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_FOUND_WEBSOCKET_CONN));
 
         Optional<WebSocketSession> targetSessionOptional = WebSocketSessionContext.getInstance().get(message.getTo());
 
@@ -59,7 +60,7 @@ public class SignalingService {
 
         EnumCallState targetState = SessionCallStateContext.getInstance()
                         .get(message.getTo())
-                        .orElseThrow(() -> new IllegalStateException("No session call state found"));
+                        .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         if (targetState != EnumCallState.IDLE) {
             sendSystem(fromSession, EnumMessageType.CALL_FAILED, "PEER_BUSY");
@@ -98,19 +99,19 @@ public class SignalingService {
     private void handleSdp(SignalingMessageModel message) {
         EnumCallState fromState = SessionCallStateContext.getInstance()
                 .get(message.getFrom())
-                .orElseThrow(() -> new IllegalStateException("No session call state found"));
+                .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         EnumCallState toState = SessionCallStateContext.getInstance()
                 .get(message.getTo())
-                .orElseThrow(() -> new IllegalStateException("No session call state found"));
+                .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         if (fromState != EnumCallState.IN_CALL || toState != EnumCallState.IN_CALL) {
-            throw new IllegalStateException("SDP_OFFER not allowed in current state");
+            throw new IllegalStateException(ExceptionMessage.SDP_OFFER_NOT_ALLOWED_IN_CURRENT_STATE);
         }
 
         WebSocketSession targetSession = WebSocketSessionContext.getInstance()
                         .get(message.getTo())
-                        .orElseThrow(() -> new IllegalStateException("Target peer offline"));
+                        .orElseThrow(() -> new IllegalStateException(ExceptionMessage.TARGET_PEER_OFFLINE));
 
         send(targetSession, message);
     }
@@ -118,7 +119,7 @@ public class SignalingService {
     private void handleIceCandidate(SignalingMessageModel message) {
         EnumCallState fromState = SessionCallStateContext.getInstance()
                 .get(message.getFrom())
-                .orElseThrow(() -> new IllegalStateException("No session call state found"));
+                .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         if (fromState == EnumCallState.RINGING || fromState == EnumCallState.IN_CALL) {
             Optional<WebSocketSession> targetSessionOptional =
