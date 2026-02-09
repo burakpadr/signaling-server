@@ -33,6 +33,9 @@ public class SignalingService {
         if (!message.getFrom().equals(fromPeerId)) {
             throw new IllegalStateException(ExceptionMessage.PEER_ID_MISMATCH);
         }
+        else if (message.getFrom().equals(message.getTo())) {
+            throw new IllegalStateException(ExceptionMessage.TARGET_PEER_CANNOT_BE_THEMSELVES);
+        }
 
         switch (message.getType()) {
 

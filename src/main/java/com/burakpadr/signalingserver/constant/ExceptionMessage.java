@@ -6,6 +6,8 @@ public class ExceptionMessage {
 
     public static final String PEER_ID_MISMATCH = "peerId mismatch.";
 
+    public static final String TARGET_PEER_CANNOT_BE_THEMSELVES = "The target peer cannot be themselves.";
+
     public static final String UNKNOWN_SIGNALING_MESSAGE_TYPE = "Unknown signaling message type.";
 
     public static final String NO_FOUND_WEBSOCKET_CONN = "No websocket connection found.";
