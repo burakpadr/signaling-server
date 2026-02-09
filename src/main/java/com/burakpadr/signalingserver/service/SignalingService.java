@@ -60,7 +60,7 @@ public class SignalingService {
         Optional<WebSocketSession> targetSessionOptional = WebSocketSessionContext.getInstance().get(message.getTo());
 
         if (targetSessionOptional.isEmpty()) {
-            sendSystem(fromSession, EnumMessageType.FAILED, "PEER_OFFLINE");
+            sendSystem(fromSession, EnumMessageType.FAILED, ExceptionMessage.TARGET_PEER_OFFLINE);
 
             return;
         }
@@ -70,7 +70,7 @@ public class SignalingService {
                         .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         if (targetState != EnumCallState.IDLE) {
-            sendSystem(fromSession, EnumMessageType.FAILED, "PEER_BUSY");
+            sendSystem(fromSession, EnumMessageType.FAILED, ExceptionMessage.TARGET_PEER_BUSY);
 
             return;
         }

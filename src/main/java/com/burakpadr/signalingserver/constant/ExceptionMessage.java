@@ -17,4 +17,6 @@ public class ExceptionMessage {
     public static final String SDP_OFFER_NOT_ALLOWED_IN_CURRENT_STATE = "SDP_OFFER is not allowed in current state.";
 
     public static final String TARGET_PEER_OFFLINE = "Target peer offline.";
+
+    public static final String TARGET_PEER_BUSY = "Target peer is busy.";
 }
