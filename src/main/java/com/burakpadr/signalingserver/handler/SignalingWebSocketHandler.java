@@ -63,7 +63,7 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
         if (Objects.nonNull(peerId)) {
             WebSocketSessionContext.getInstance().remove(peerId);
 
-            log.info("Peer disconnected with id {}", session.getId());
+            log.info("Peer disconnected with id {}", peerId);
         }
     }
 
