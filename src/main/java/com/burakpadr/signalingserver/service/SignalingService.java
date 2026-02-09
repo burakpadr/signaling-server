@@ -30,33 +30,37 @@ public class SignalingService {
             throw new IllegalArgumentException(ExceptionMessage.INVALID_SIGNALING_MESSAGE_FORMAT, e);
         }
 
-        if (!message.getFrom().equals(fromPeerId)) {
-            throw new IllegalStateException(ExceptionMessage.PEER_ID_MISMATCH);
-        }
-        else if (message.getFrom().equals(message.getTo())) {
-            throw new IllegalStateException(ExceptionMessage.TARGET_PEER_CANNOT_BE_THEMSELVES);
-        }
-
-        switch (message.getType()) {
-
-            case CALL_REQUEST -> handleCallRequest(message);
-            case CALL_ACCEPT -> handleCallAccept(message);
-            case CALL_REJECT -> handleCallReject(message);
-            case SDP_OFFER, SDP_ANSWER -> handleSdp(message);
-            case ICE_CANDIDATE -> handleIceCandidate(message);
-            default -> throw new IllegalStateException(ExceptionMessage.UNKNOWN_SIGNALING_MESSAGE_TYPE);
-        }
-    }
-
-    private void handleCallRequest(SignalingMessageModel message) {
         WebSocketSession fromSession = WebSocketSessionContext.getInstance()
                 .get(message.getFrom())
                 .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_FOUND_WEBSOCKET_CONN));
 
+        if (!message.getFrom().equals(fromPeerId)) {
+            sendSystem(fromSession, EnumMessageType.FAILED, ExceptionMessage.PEER_ID_MISMATCH);
+
+            return;
+        }
+        else if (message.getFrom().equals(message.getTo())) {
+            sendSystem(fromSession, EnumMessageType.FAILED, ExceptionMessage.TARGET_PEER_CANNOT_BE_THEMSELVES);
+
+            return;
+        }
+
+        switch (message.getType()) {
+
+            case CALL_REQUEST -> handleCallRequest(fromSession, message);
+            case CALL_ACCEPT -> handleCallAccept(message);
+            case CALL_REJECT -> handleCallReject(message);
+            case SDP_OFFER, SDP_ANSWER -> handleSdp(fromSession, message);
+            case ICE_CANDIDATE -> handleIceCandidate(message);
+            default -> sendSystem(fromSession, EnumMessageType.FAILED, ExceptionMessage.UNKNOWN_SIGNALING_MESSAGE_TYPE);
+        }
+    }
+
+    private void handleCallRequest(WebSocketSession fromSession, SignalingMessageModel message) {
         Optional<WebSocketSession> targetSessionOptional = WebSocketSessionContext.getInstance().get(message.getTo());
 
         if (targetSessionOptional.isEmpty()) {
-            sendSystem(fromSession, EnumMessageType.CALL_FAILED, "PEER_OFFLINE");
+            sendSystem(fromSession, EnumMessageType.FAILED, "PEER_OFFLINE");
 
             return;
         }
@@ -66,7 +70,7 @@ public class SignalingService {
                         .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         if (targetState != EnumCallState.IDLE) {
-            sendSystem(fromSession, EnumMessageType.CALL_FAILED, "PEER_BUSY");
+            sendSystem(fromSession, EnumMessageType.FAILED, "PEER_BUSY");
 
             return;
         }
@@ -99,7 +103,7 @@ public class SignalingService {
         send(callerSession, message);
     }
 
-    private void handleSdp(SignalingMessageModel message) {
+    private void handleSdp(WebSocketSession fromSession, SignalingMessageModel message) {
         EnumCallState fromState = SessionCallStateContext.getInstance()
                 .get(message.getFrom())
                 .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
@@ -109,7 +113,9 @@ public class SignalingService {
                 .orElseThrow(() -> new IllegalStateException(ExceptionMessage.NO_SESSION_CALL_STATE_FOUND));
 
         if (fromState != EnumCallState.IN_CALL || toState != EnumCallState.IN_CALL) {
-            throw new IllegalStateException(ExceptionMessage.SDP_OFFER_NOT_ALLOWED_IN_CURRENT_STATE);
+            sendSystem(fromSession, EnumMessageType.FAILED, ExceptionMessage.SDP_OFFER_NOT_ALLOWED_IN_CURRENT_STATE);
+
+            return;
         }
 
         WebSocketSession targetSession = WebSocketSessionContext.getInstance()
