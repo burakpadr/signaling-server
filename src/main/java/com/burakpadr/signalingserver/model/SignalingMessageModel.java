@@ -11,6 +11,7 @@ import tools.jackson.databind.JsonNode;
 @AllArgsConstructor
 public class SignalingMessageModel {
 
+    private String correlationId;
     private EnumMessageType type;
     private String from;
     private String to;
